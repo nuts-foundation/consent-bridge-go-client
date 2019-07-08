@@ -22,6 +22,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/nuts-foundation/consent-bridge-go-client/pkg"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
@@ -96,7 +97,12 @@ type BridgeClient interface {
 	AcceptConsentRequestState(context.Context, string, PartyAttachmentSignature) error
 }
 
-
+// NewConsentBridgeClient returns a BridgeClient configured according to the current config
+func NewConsentBridgeClient() BridgeClient {
+	return HttpClient{
+		ServerAddress: fmt.Sprintf("http://%v", pkg.ConfigInstance().Address),
+	}
+}
 
 func (hb HttpClient) client() *Client {
 	if hb.customClient != nil {
