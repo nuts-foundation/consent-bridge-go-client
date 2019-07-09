@@ -34,7 +34,7 @@ func NewConsentBridgeClientEngine() *engine.Engine {
 }
 
 func flagSet() *pflag.FlagSet {
-	flags := pflag.NewFlagSet("cstore", pflag.ContinueOnError)
+	flags := pflag.NewFlagSet("cbridge", pflag.ContinueOnError)
 
 	flags.String(pkg.ConfigAddress, pkg.ConfigAddressDefault, "API Address of the consent bridge")
 
