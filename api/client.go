@@ -162,6 +162,7 @@ func NewConsentBridgeClient() BridgeClient {
 	return HttpClient{
 		ServerAddress: pkg.ConfigInstance().Address,
 		Logger: logrus.WithField("component", "ConsentBridgeClient"),
+		Timeout: time.Second * 60,
 	}
 }
 
