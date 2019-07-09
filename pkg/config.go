@@ -21,7 +21,7 @@ package pkg
 import "sync"
 
 const ConfigAddress = "address"
-const ConfigAddressDefault = "localhost:8080"
+const ConfigAddressDefault = "http://localhost:8080"
 
 // BridgeClientConfig holds the configuration for connecting to the consent-bridge
 type BridgeClientConfig struct {

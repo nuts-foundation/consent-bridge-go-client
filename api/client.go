@@ -168,12 +168,12 @@ func NewConsentBridgeClient() BridgeClient {
 func (hb HttpClient) client() *Client {
 	if hb.customClient != nil {
 		return &Client{
-			Server: fmt.Sprintf("http://%v", hb.ServerAddress),
+			Server: hb.ServerAddress,
 			Client: *hb.customClient,
 		}
 	}
 
 	return &Client{
-		Server: fmt.Sprintf("http://%v", hb.ServerAddress),
+		Server: hb.ServerAddress,
 	}
 }
