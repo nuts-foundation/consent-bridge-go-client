@@ -160,7 +160,7 @@ type BridgeClient interface {
 // NewConsentBridgeClient returns a BridgeClient configured according to the current config
 func NewConsentBridgeClient() BridgeClient {
 	return HttpClient{
-		ServerAddress: fmt.Sprintf("http://%v", pkg.ConfigInstance().Address),
+		ServerAddress: pkg.ConfigInstance().Address,
 		Logger: logrus.WithField("component", "ConsentBridgeClient"),
 	}
 }
