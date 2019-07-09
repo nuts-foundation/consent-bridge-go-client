@@ -87,6 +87,9 @@ func (hb HttpClient) GetAttachmentBySecureHash(ctx context.Context, hash string)
 }
 
 func (hb HttpClient) NewConsentRequestState(ctx context.Context, state NewConsentRequestState) error {
+
+	// convert Period to date.
+
 	resp, err := hb.handleError("NewConsentRequestState", func() (*http.Response, error) {
 		return hb.client().NewConsentRequestState(ctx, state)
 	})
@@ -134,7 +137,7 @@ func (hb HttpClient) handleError(name string, f func() (*http.Response, error) )
 	if resp.StatusCode != 200 {
 		defer resp.Body.Close()
 		errorBody, _ := ioutil.ReadAll(resp.Body)
-		err := fmt.Errorf("error in %s, status: %d, reason: %v", name, resp.StatusCode, errorBody)
+		err := fmt.Errorf("error in %s, status: %d, reason: %v", name, resp.StatusCode, string(errorBody))
 		hb.Logger.Error(err)
 		return resp, err
 	}
