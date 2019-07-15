@@ -79,7 +79,7 @@ func (hb HttpClient) GetAttachmentBySecureHash(ctx context.Context, hash string)
 	})
 
 	if err == nil {
-		resp.Body.Close()
+		defer resp.Body.Close()
 		return ioutil.ReadAll(resp.Body)
 	}
 
