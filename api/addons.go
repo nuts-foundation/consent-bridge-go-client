@@ -20,7 +20,7 @@ package api
 
 import "fmt"
 
-func (crs ConsentRequestState) String() string {
+func (crs FullConsentRequestState) String() string {
 	return crs.ConsentId.String()
 }
 

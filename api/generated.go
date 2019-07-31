@@ -8,11 +8,9 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"github.com/deepmap/oapi-codegen/pkg/runtime"
 	"github.com/getkin/kin-openapi/openapi3"
-	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -31,27 +29,17 @@ type ConsentId struct {
 	ExternalId *string `json:"externalId,omitempty"`
 }
 
-// ConsentRequestJobState defines component schema for ConsentRequestJobState.
-type ConsentRequestJobState struct {
-	ConsentId      ConsentId      `json:"consentId"`
-	StateMachineId StateMachineId `json:"stateMachineId"`
-}
-
-// ConsentRequestState defines component schema for ConsentRequestState.
-type ConsentRequestState struct {
-	Attachments   []string                   `json:"attachments"`
-	ConsentId     ConsentId                  `json:"consentId"`
-	LegalEntities []Identifier               `json:"legalEntities"`
-	Signatures    []PartyAttachmentSignature `json:"signatures"`
-}
-
 // Domain defines component schema for Domain.
 type Domain string
 
-// EventStreamSetting defines component schema for EventStreamSetting.
-type EventStreamSetting struct {
-	Epoch int64  `json:"epoch"`
-	Topic string `json:"topic"`
+// FullConsentRequestState defines component schema for FullConsentRequestState.
+type FullConsentRequestState struct {
+	AttachmentHashes []string                   `json:"attachmentHashes,omitempty"`
+	CipherText       *string                    `json:"cipherText,omitempty"`
+	ConsentId        ConsentId                  `json:"consentId"`
+	LegalEntities    []Identifier               `json:"legalEntities"`
+	Metadata         *Metadata                  `json:"metadata,omitempty"`
+	Signatures       []PartyAttachmentSignature `json:"signatures,omitempty"`
 }
 
 // Identifier defines component schema for Identifier.
@@ -63,13 +51,6 @@ type Metadata struct {
 	OrganisationSecureKeys []ASymmetricKey `json:"organisationSecureKeys"`
 	Period                 Period          `json:"period"`
 	SecureKey              SymmetricKey    `json:"secureKey"`
-}
-
-// NewConsentRequestState defines component schema for NewConsentRequestState.
-type NewConsentRequestState struct {
-	Attachment string   `json:"attachment"`
-	ExternalId string   `json:"externalId"`
-	Metadata   Metadata `json:"metadata"`
 }
 
 // PartyAttachmentSignature defines component schema for PartyAttachmentSignature.
@@ -118,46 +99,6 @@ func (c *Client) GetAttachmentBySecureHash(ctx context.Context, secureHash strin
 	return c.Client.Do(req)
 }
 
-// NewConsentRequestState request with JSON body
-func (c *Client) NewConsentRequestState(ctx context.Context, body NewConsentRequestState) (*http.Response, error) {
-	req, err := NewNewConsentRequestStateRequest(c.Server, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	return c.Client.Do(req)
-}
-
-// AcceptConsentRequestState request with JSON body
-func (c *Client) AcceptConsentRequestState(ctx context.Context, uuid string, body PartyAttachmentSignature) (*http.Response, error) {
-	req, err := NewAcceptConsentRequestStateRequest(c.Server, uuid, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	return c.Client.Do(req)
-}
-
-// FinalizeConsentRequestState request
-func (c *Client) FinalizeConsentRequestState(ctx context.Context, uuid string) (*http.Response, error) {
-	req, err := NewFinalizeConsentRequestStateRequest(c.Server, uuid)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	return c.Client.Do(req)
-}
-
-// InitEventStream request with JSON body
-func (c *Client) InitEventStream(ctx context.Context, body EventStreamSetting) (*http.Response, error) {
-	req, err := NewInitEventStreamRequest(c.Server, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	return c.Client.Do(req)
-}
-
 // GetConsentRequestStateById request
 func (c *Client) GetConsentRequestStateById(ctx context.Context, uuid string) (*http.Response, error) {
 	req, err := NewGetConsentRequestStateByIdRequest(c.Server, uuid)
@@ -189,118 +130,6 @@ func NewGetAttachmentBySecureHashRequest(server string, secureHash string) (*htt
 	return req, nil
 }
 
-// NewNewConsentRequestStateRequest generates requests for NewConsentRequestState with JSON body
-func NewNewConsentRequestStateRequest(server string, body NewConsentRequestState) (*http.Request, error) {
-	var bodyReader io.Reader
-
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-
-	return NewNewConsentRequestStateRequestWithBody(server, "application/json", bodyReader)
-}
-
-// NewNewConsentRequestStateRequestWithBody generates requests for NewConsentRequestState with non-JSON body
-func NewNewConsentRequestStateRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	queryURL := fmt.Sprintf("%s/api/consent/consent_request", server)
-
-	req, err := http.NewRequest("POST", queryURL, body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-	return req, nil
-}
-
-// NewAcceptConsentRequestStateRequest generates requests for AcceptConsentRequestState with JSON body
-func NewAcceptConsentRequestStateRequest(server string, uuid string, body PartyAttachmentSignature) (*http.Request, error) {
-	var bodyReader io.Reader
-
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-
-	return NewAcceptConsentRequestStateRequestWithBody(server, uuid, "application/json", bodyReader)
-}
-
-// NewAcceptConsentRequestStateRequestWithBody generates requests for AcceptConsentRequestState with non-JSON body
-func NewAcceptConsentRequestStateRequestWithBody(server string, uuid string, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParam("simple", false, "uuid", uuid)
-	if err != nil {
-		return nil, err
-	}
-
-	queryURL := fmt.Sprintf("%s/api/consent/consent_request/%s/accept", server, pathParam0)
-
-	req, err := http.NewRequest("POST", queryURL, body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-	return req, nil
-}
-
-// NewFinalizeConsentRequestStateRequest generates requests for FinalizeConsentRequestState
-func NewFinalizeConsentRequestStateRequest(server string, uuid string) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParam("simple", false, "uuid", uuid)
-	if err != nil {
-		return nil, err
-	}
-
-	queryURL := fmt.Sprintf("%s/api/consent/consent_request/%s/finalize", server, pathParam0)
-
-	req, err := http.NewRequest("POST", queryURL, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewInitEventStreamRequest generates requests for InitEventStream with JSON body
-func NewInitEventStreamRequest(server string, body EventStreamSetting) (*http.Request, error) {
-	var bodyReader io.Reader
-
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-
-	return NewInitEventStreamRequestWithBody(server, "application/json", bodyReader)
-}
-
-// NewInitEventStreamRequestWithBody generates requests for InitEventStream with non-JSON body
-func NewInitEventStreamRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	queryURL := fmt.Sprintf("%s/api/consent/event_stream", server)
-
-	req, err := http.NewRequest("POST", queryURL, body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-	return req, nil
-}
-
 // NewGetConsentRequestStateByIdRequest generates requests for GetConsentRequestStateById
 func NewGetConsentRequestStateByIdRequest(server string, uuid string) (*http.Request, error) {
 	var err error
@@ -325,38 +154,30 @@ func NewGetConsentRequestStateByIdRequest(server string, uuid string) (*http.Req
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
 }
 
 // GetSwagger returns the Swagger specification corresponding to the generated code

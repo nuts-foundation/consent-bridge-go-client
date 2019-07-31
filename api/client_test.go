@@ -79,21 +79,3 @@ func TestHttpClient_GetConsentRequestStateById(t *testing.T) {
 		}
 	})
 }
-
-func TestHttpClient_AcceptConsentRequestState(t *testing.T) {
-	t.Run("200", func(t *testing.T) {
-		client := newHttpClientWithBody(200, []byte("{}"))
-
-		if err := client.AcceptConsentRequestState(context.TODO(), "uuid", PartyAttachmentSignature{}); err != nil {
-			t.Errorf("Expected no error, got [%v]", err)
-		}
-	})
-
-	t.Run("404 returns error", func(t *testing.T) {
-		client := newHttpClientWithBody(404, []byte{})
-
-		if err := client.AcceptConsentRequestState(context.TODO(), "uuid", PartyAttachmentSignature{}); err == nil {
-			t.Errorf("Expected error, got nothing")
-		}
-	})
-}
