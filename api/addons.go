@@ -25,5 +25,5 @@ func (crs FullConsentRequestState) String() string {
 }
 
 func (c ConsentId) String() string {
-	return fmt.Sprintf("ID{UUID: %s, ExternalID: %s}", *c.UUID, *c.ExternalId)
+	return fmt.Sprintf("ID{UUID: %v, ExternalID: %v}", *c.UUID, *c.ExternalId)
 }
