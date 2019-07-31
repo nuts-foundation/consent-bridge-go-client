@@ -21,9 +21,6 @@ package api
 import "fmt"
 
 func (crs FullConsentRequestState) String() string {
-	return crs.ConsentId.String()
+	return fmt.Sprintf("%+v", crs.ConsentId)
 }
 
-func (c ConsentId) String() string {
-	return fmt.Sprintf("ID{UUID: %v, ExternalID: %v}", c.UUID, c.ExternalId)
-}
