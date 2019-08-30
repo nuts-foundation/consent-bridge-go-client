@@ -5,11 +5,10 @@ package api
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/base64"
 	"fmt"
 	"github.com/deepmap/oapi-codegen/pkg/runtime"
-	"github.com/labstack/echo/v4"
-	"io/ioutil"
+	"github.com/getkin/kin-openapi/openapi3"
 	"net/http"
 	"strings"
 	"time"
@@ -28,24 +27,17 @@ type ConsentId struct {
 	ExternalId *string `json:"externalId,omitempty"`
 }
 
-// ConsentRequestState defines component schema for ConsentRequestState.
-type ConsentRequestState struct {
-	Attachments   []string                   `json:"attachments"`
-	ConsentId     ConsentId                  `json:"consentId"`
-	LegalEntities []Identifier               `json:"legalEntities"`
-	Signatures    []PartyAttachmentSignature `json:"signatures"`
-}
-
 // Domain defines component schema for Domain.
 type Domain string
 
 // FullConsentRequestState defines component schema for FullConsentRequestState.
 type FullConsentRequestState struct {
-	CipherText    string                     `json:"cipherText"`
-	ConsentId     ConsentId                  `json:"consentId"`
-	LegalEntities []Identifier               `json:"legalEntities"`
-	Metadata      Metadata                   `json:"metadata"`
-	Signatures    []PartyAttachmentSignature `json:"signatures"`
+	AttachmentHashes []string                   `json:"attachmentHashes,omitempty"`
+	CipherText       *string                    `json:"cipherText,omitempty"`
+	ConsentId        ConsentId                  `json:"consentId"`
+	LegalEntities    []Identifier               `json:"legalEntities"`
+	Metadata         *Metadata                  `json:"metadata,omitempty"`
+	Signatures       []PartyAttachmentSignature `json:"signatures,omitempty"`
 }
 
 // Identifier defines component schema for Identifier.
@@ -57,13 +49,6 @@ type Metadata struct {
 	OrganisationSecureKeys []ASymmetricKey `json:"organisationSecureKeys"`
 	Period                 Period          `json:"period"`
 	SecureKey              SymmetricKey    `json:"secureKey"`
-}
-
-// NewConsentRequestState defines component schema for NewConsentRequestState.
-type NewConsentRequestState struct {
-	Attachment string   `json:"attachment"`
-	ExternalId string   `json:"externalId"`
-	Metadata   Metadata `json:"metadata"`
 }
 
 // PartyAttachmentSignature defines component schema for PartyAttachmentSignature.
@@ -140,42 +125,6 @@ func (c *Client) GetConsentRequestStateById(ctx context.Context, uuid string) (*
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(req, ctx)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return c.Client.Do(req)
-}
-
-// ClientWithResponses builds on ClientInterface to offer response payloads
-type ClientWithResponses struct {
-	ClientInterface
-}
-
-// NewClientWithResponses returns a ClientWithResponses with a default Client:
-func NewClientWithResponses(server string) *ClientWithResponses {
-	return &ClientWithResponses{
-		ClientInterface: &Client{
-			Client: http.Client{},
-			Server: server,
-		},
-	}
-}
-
-// getAttachmentBySecureHashResponse is returned by Client.GetAttachmentBySecureHash()
-type getAttachmentBySecureHashResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-}
-
-// Status returns HTTPResponse.Status
-func (r *getAttachmentBySecureHashResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
 	return http.StatusText(0)
 }
 
@@ -210,146 +159,8 @@ func ParsegetAttachmentBySecureHashResponse(rsp *http.Response) (*getAttachmentB
 	return response, nil
 }
 
-// GetAttachmentBySecureHash request returning *GetAttachmentBySecureHashResponse
-func (c *ClientWithResponses) GetAttachmentBySecureHashWithResponse(ctx context.Context, secureHash string) (*getAttachmentBySecureHashResponse, error) {
-	rsp, err := c.GetAttachmentBySecureHash(ctx, secureHash)
-	if err != nil {
-		return nil, err
-	}
-	return ParsegetAttachmentBySecureHashResponse(rsp)
-}
-
-// getConsentRequestStateByIdResponse is returned by Client.GetConsentRequestStateById()
-type getConsentRequestStateByIdResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *ConsentRequestState
-}
-
-// Status returns HTTPResponse.Status
-func (r *getConsentRequestStateByIdResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r *getConsentRequestStateByIdResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ParsegetConsentRequestStateByIdResponse parses an HTTP response from a GetConsentRequestStateByIdWithResponse call
-func ParsegetConsentRequestStateByIdResponse(rsp *http.Response) (*getConsentRequestStateByIdResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
-	defer rsp.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &getConsentRequestStateByIdResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		response.JSON200 = &ConsentRequestState{}
-		if err := json.Unmarshal(bodyBytes, response.JSON200); err != nil {
-			return nil, err
-		}
-	case rsp.StatusCode == 404:
-		break // No content-type
-	}
-
-	return response, nil
-}
-
-// GetConsentRequestStateById request returning *GetConsentRequestStateByIdResponse
-func (c *ClientWithResponses) GetConsentRequestStateByIdWithResponse(ctx context.Context, uuid string) (*getConsentRequestStateByIdResponse, error) {
-	rsp, err := c.GetConsentRequestStateById(ctx, uuid)
-	if err != nil {
-		return nil, err
-	}
-	return ParsegetConsentRequestStateByIdResponse(rsp)
-}
-
-// NewGetAttachmentBySecureHashRequest generates requests for GetAttachmentBySecureHash
-func NewGetAttachmentBySecureHashRequest(server string, secureHash string) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParam("simple", false, "secureHash", secureHash)
-	if err != nil {
-		return nil, err
-	}
-
-	queryUrl := fmt.Sprintf("%s/api/attachment/%s", server, pathParam0)
-
-	req, err := http.NewRequest("GET", queryUrl, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
 // NewGetConsentRequestStateByIdRequest generates requests for GetConsentRequestStateById
 func NewGetConsentRequestStateByIdRequest(server string, uuid string) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParam("simple", false, "uuid", uuid)
-	if err != nil {
-		return nil, err
-	}
-
-	queryUrl := fmt.Sprintf("%s/api/consent_request_state/%s", server, pathParam0)
-
-	req, err := http.NewRequest("GET", queryUrl, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// ServerInterface represents all server handlers.
-type ServerInterface interface {
-	// download an attachment identified by its hash (GET /api/attachment/{secureHash})
-	GetAttachmentBySecureHash(ctx echo.Context, secureHash string) error
-	// Get a consent request state by its UUID (GET /api/consent_request_state/{uuid})
-	GetConsentRequestStateById(ctx echo.Context, uuid string) error
-}
-
-// ServerInterfaceWrapper converts echo contexts to parameters.
-type ServerInterfaceWrapper struct {
-	Handler ServerInterface
-}
-
-// GetAttachmentBySecureHash converts echo context to params.
-func (w *ServerInterfaceWrapper) GetAttachmentBySecureHash(ctx echo.Context) error {
-	var err error
-	// ------------- Path parameter "secureHash" -------------
-	var secureHash string
-
-	err = runtime.BindStyledParameter("simple", false, "secureHash", ctx.Param("secureHash"), &secureHash)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter secureHash: %s", err))
-	}
-
-	// Invoke the callback with all the unmarshalled arguments
-	err = w.Handler.GetAttachmentBySecureHash(ctx, secureHash)
-	return err
-}
-
-// GetConsentRequestStateById converts echo context to params.
-func (w *ServerInterfaceWrapper) GetConsentRequestStateById(ctx echo.Context) error {
 	var err error
 	// ------------- Path parameter "uuid" -------------
 	var uuid string
@@ -364,8 +175,51 @@ func (w *ServerInterfaceWrapper) GetConsentRequestStateById(ctx echo.Context) er
 	return err
 }
 
-// RegisterHandlers adds each server route to the EchoRouter.
-func RegisterHandlers(router runtime.EchoRouter, si ServerInterface) {
+// Base64 encoded, gzipped, json marshaled Swagger object
+var swaggerSpec = []string{
+
+	"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",
+}
+
+// GetSwagger returns the Swagger specification corresponding to the generated code
+// in this file.
+func GetSwagger() (*openapi3.Swagger, error) {
+	zipped, err := base64.StdEncoding.DecodeString(strings.Join(swaggerSpec, ""))
+	if err != nil {
+		return nil, fmt.Errorf("error base64 decoding spec: %s", err)
+	}
+	zr, err := gzip.NewReader(bytes.NewReader(zipped))
+	if err != nil {
+		return nil, fmt.Errorf("error decompressing spec: %s", err)
+	}
+	var buf bytes.Buffer
+	_, err = buf.ReadFrom(zr)
+	if err != nil {
+		return nil, fmt.Errorf("error decompressing spec: %s", err)
+	}
 
 	wrapper := ServerInterfaceWrapper{
 		Handler: si,

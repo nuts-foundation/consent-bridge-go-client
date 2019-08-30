@@ -37,7 +37,7 @@ type HttpClient struct {
 	customClient  *http.Client
 }
 
-func (hb HttpClient) GetConsentRequestStateById(ctx context.Context, uuid string) (*ConsentRequestState, error) {
+func (hb HttpClient) GetConsentRequestStateById(ctx context.Context, uuid string) (*FullConsentRequestState, error) {
 	resp, err := hb.handleError("GetConsentRequestStateById", func() (*http.Response, error) {
 		return hb.client().GetConsentRequestStateById(ctx, uuid)
 	})
@@ -47,7 +47,7 @@ func (hb HttpClient) GetConsentRequestStateById(ctx context.Context, uuid string
 	}
 
 	// response is of type ConsentRequestState
-	respObj := ConsentRequestState{}
+	respObj := FullConsentRequestState{}
 
 	err = json.NewDecoder(resp.Body).Decode(&respObj)
 	if err != nil {
@@ -94,7 +94,7 @@ func (hb HttpClient) handleError(name string, f func() (*http.Response, error) )
 
 type BridgeClient interface {
 	// GetConsentRequestStateById returns the consent request state metadata based on the uuid
-	GetConsentRequestStateById(context.Context, string) (*ConsentRequestState, error)
+	GetConsentRequestStateById(context.Context, string) (*FullConsentRequestState, error)
 	// GetAttachmentBySecureHash retrieves an attachment by its hash
 	GetAttachmentBySecureHash(context.Context, string) ([]byte, error)
 }

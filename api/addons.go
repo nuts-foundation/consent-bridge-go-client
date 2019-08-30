@@ -20,10 +20,7 @@ package api
 
 import "fmt"
 
-func (crs ConsentRequestState) String() string {
-	return crs.ConsentId.String()
+func (crs FullConsentRequestState) String() string {
+	return fmt.Sprintf("%+v", crs.ConsentId)
 }
 
-func (c ConsentId) String() string {
-	return fmt.Sprintf("ID{UUID: %s, ExternalID: %s}", *c.UUID, *c.ExternalId)
-}

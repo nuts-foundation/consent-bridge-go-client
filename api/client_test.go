@@ -79,4 +79,3 @@ func TestHttpClient_GetConsentRequestStateById(t *testing.T) {
 		}
 	})
 }
-
