@@ -20,7 +20,7 @@ package engine
 
 import (
 	"github.com/nuts-foundation/consent-bridge-go-client/pkg"
-	engine "github.com/nuts-foundation/nuts-go/pkg"
+	engine "github.com/nuts-foundation/nuts-go-core"
 	"github.com/spf13/pflag"
 )
 
