@@ -38,7 +38,7 @@ The client and server API is generated from the nuts-consent-store open-api spec
 
 .. code-block:: shell
 
-    oapi-codegen -generate client -package api ../nuts-consent-bridge/docs/_static/nuts-consent-bridge.yaml > api/generated.go
+    oapi-codegen -generate types, client -package api ../nuts-consent-bridge/docs/_static/nuts-consent-bridge.yaml > api/generated.go
 
 
 README
