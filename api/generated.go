@@ -29,10 +29,10 @@ type ConsentId struct {
 
 // ConsentRecord defines model for ConsentRecord.
 type ConsentRecord struct {
-	AttachmentHash *string                    `json:"attachmentHash,omitempty"`
-	CipherText     *string                    `json:"cipherText,omitempty"`
-	Metadata       *Metadata                  `json:"metadata,omitempty"`
-	Signatures     []PartyAttachmentSignature `json:"signatures"`
+	AttachmentHash *string                     `json:"attachmentHash,omitempty"`
+	CipherText     *string                     `json:"cipherText,omitempty"`
+	Metadata       *Metadata                   `json:"metadata,omitempty"`
+	Signatures     *[]PartyAttachmentSignature `json:"signatures,omitempty"`
 }
 
 // ConsentState defines model for ConsentState.
@@ -290,6 +290,10 @@ func ParsegetAttachmentBySecureHashResponse(rsp *http.Response) (*getAttachmentB
 	}
 
 	switch {
+	case rsp.StatusCode == 200:
+	// Content-type (application/octet-stream) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 	}
 
 	return response, nil
@@ -314,7 +318,8 @@ func ParsegetConsentRequestStateByIdResponse(rsp *http.Response) (*getConsentReq
 		if err := json.Unmarshal(bodyBytes, response.JSON200); err != nil {
 			return nil, err
 		}
-
+	case rsp.StatusCode == 404:
+		break // No content-type
 	}
 
 	return response, nil
