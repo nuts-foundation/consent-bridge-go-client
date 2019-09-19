@@ -29,10 +29,10 @@ type ConsentId struct {
 
 // ConsentRecord defines model for ConsentRecord.
 type ConsentRecord struct {
-	AttachmentHash *string                     `json:"attachmentHash,omitempty"`
-	CipherText     *string                     `json:"cipherText,omitempty"`
-	Metadata       *Metadata                   `json:"metadata,omitempty"`
-	Signatures     *[]PartyAttachmentSignature `json:"signatures,omitempty"`
+	AttachmentHash *string                    `json:"attachmentHash,omitempty"`
+	CipherText     *string                    `json:"cipherText,omitempty"`
+	Metadata       *Metadata                  `json:"metadata,omitempty"`
+	Signatures     []PartyAttachmentSignature `json:"signatures"`
 }
 
 // ConsentState defines model for ConsentState.
@@ -46,9 +46,9 @@ type Domain string
 
 // FullConsentRequestState defines model for FullConsentRequestState.
 type FullConsentRequestState struct {
-	ConsentId      ConsentId        `json:"consentId"`
-	ConsentRecords *[]ConsentRecord `json:"consentRecords,omitempty"`
-	LegalEntities  []Identifier     `json:"legalEntities"`
+	ConsentId      ConsentId       `json:"consentId"`
+	ConsentRecords []ConsentRecord `json:"consentRecords"`
+	LegalEntities  []Identifier    `json:"legalEntities"`
 }
 
 // Identifier defines model for Identifier.
