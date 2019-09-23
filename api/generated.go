@@ -56,6 +56,7 @@ type Identifier string
 
 // Metadata defines model for Metadata.
 type Metadata struct {
+	ConsentRecordHash      string          `json:"consentRecordHash"`
 	Domain                 []Domain        `json:"domain"`
 	OrganisationSecureKeys []ASymmetricKey `json:"organisationSecureKeys"`
 	Period                 Period          `json:"period"`
