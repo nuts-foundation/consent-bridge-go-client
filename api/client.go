@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/nuts-foundation/consent-bridge-go-client/pkg"
+	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
@@ -51,7 +52,7 @@ func (hb HttpClient) GetConsentRequestStateById(ctx context.Context, uuid string
 
 	err = json.NewDecoder(resp.Body).Decode(&respObj)
 	if err != nil {
-		err := fmt.Errorf("error in decoding ConsentRequestState: %v", err)
+		err := fmt.Errorf("error in decoding ConsentRequestState: %w", err)
 		hb.Logger.Error(err)
 		return nil, err
 	}
@@ -76,7 +77,7 @@ func (hb HttpClient) handleError(name string, f func() (*http.Response, error) )
 	resp, err := f()
 
 	if err != nil {
-		err := fmt.Errorf("error in %s: %v", name, err)
+		err := fmt.Errorf("error in %s: %w", name, core.Wrap(err))
 		hb.Logger.Error(err)
 		return nil, err
 	}
