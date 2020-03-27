@@ -3,8 +3,8 @@ Nuts consent bridge go client
 
 Library for contacting consent-bridge. Exposed as Nuts-go engine.
 
-.. image:: https://travis-ci.org/nuts-foundation/consent-bridge-go-client.svg?branch=master
-    :target: https://travis-ci.org/nuts-foundation/consent-bridge-go-client
+.. image:: https://circleci.com/gh/nuts-foundation/consent-bridge-go-client.svg?style=svg
+    :target: https://circleci.com/gh/nuts-foundation/consent-bridge-go-client
     :alt: Build Status
 
 .. image:: https://codecov.io/gh/nuts-foundation/consent-bridge-go-client/branch/master/graph/badge.svg
