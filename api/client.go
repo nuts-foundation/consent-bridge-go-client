@@ -113,7 +113,7 @@ func (hb HttpClient) client() *Client {
 	if hb.customClient != nil {
 		return &Client{
 			Server: hb.ServerAddress,
-			Client: *hb.customClient,
+			Client: hb.customClient,
 		}
 	}
 

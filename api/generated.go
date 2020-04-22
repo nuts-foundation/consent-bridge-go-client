@@ -11,35 +11,42 @@ import (
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
 
 // ASymmetricKey defines model for ASymmetricKey.
 type ASymmetricKey struct {
-	Alg         *string    `json:"alg,omitempty"`
-	CipherText  *string    `json:"cipherText,omitempty"`
+	Alg *string `json:"alg,omitempty"`
+
+	// base64 encoded
+	CipherText *string `json:"cipherText,omitempty"`
+
+	// Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a colon (:) and then the identifying value of the given URN
 	LegalEntity Identifier `json:"legalEntity"`
 }
 
 // ConsentId defines model for ConsentId.
 type ConsentId struct {
-	UUID       string  `json:"UUID"`
+
+	// Unique identifier assigned by the consent cordapp
+	UUID string `json:"UUID"`
+
+	// Unique hexadecimal identifier created based on BSN and private key of care provider.
 	ExternalId *string `json:"externalId,omitempty"`
 }
 
 // ConsentRecord defines model for ConsentRecord.
 type ConsentRecord struct {
-	AttachmentHash *string                     `json:"attachmentHash,omitempty"`
-	CipherText     *string                     `json:"cipherText,omitempty"`
-	Metadata       *Metadata                   `json:"metadata,omitempty"`
-	Signatures     *[]PartyAttachmentSignature `json:"signatures,omitempty"`
-}
 
-// ConsentState defines model for ConsentState.
-type ConsentState struct {
-	ConsentId      ConsentId       `json:"consentId"`
-	ConsentRecords []ConsentRecord `json:"consentRecords"`
+	// SHA256 of attachment (metadata + cipherText)
+	AttachmentHash *string `json:"attachmentHash,omitempty"`
+
+	// Base64 encoded cipher_text.bin (fhir)
+	CipherText *string                     `json:"cipherText,omitempty"`
+	Metadata   *Metadata                   `json:"metadata,omitempty"`
+	Signatures *[]PartyAttachmentSignature `json:"signatures,omitempty"`
 }
 
 // Domain defines model for Domain.
@@ -62,17 +69,25 @@ type JWK struct {
 
 // Metadata defines model for Metadata.
 type Metadata struct {
+
+	// Hash of the unencrypted consent FHIR resource. Can be used for uniqueness.
 	ConsentRecordHash      string          `json:"consentRecordHash"`
 	Domain                 []Domain        `json:"domain"`
 	OrganisationSecureKeys []ASymmetricKey `json:"organisationSecureKeys"`
 	Period                 Period          `json:"period"`
-	PreviousAttachmentHash *string         `json:"previousAttachmentHash,omitempty"`
-	SecureKey              SymmetricKey    `json:"secureKey"`
+
+	// SHA256 of cipherText bytes
+	PreviousAttachmentHash *string      `json:"previousAttachmentHash,omitempty"`
+	SecureKey              SymmetricKey `json:"secureKey"`
 }
 
 // PartyAttachmentSignature defines model for PartyAttachmentSignature.
 type PartyAttachmentSignature struct {
-	Attachment  string           `json:"attachment"`
+
+	// Hexidecimal SecureHash value
+	Attachment string `json:"attachment"`
+
+	// Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a colon (:) and then the identifying value of the given URN
 	LegalEntity Identifier       `json:"legalEntity"`
 	Signature   SignatureWithKey `json:"signature"`
 }
@@ -85,12 +100,13 @@ type Period struct {
 
 // SignatureWithKey defines model for SignatureWithKey.
 type SignatureWithKey struct {
-	Data      string `json:"data"`
-	PublicKey JWK    `json:"publicKey"`
-}
 
-// StateMachineId defines model for StateMachineId.
-type StateMachineId string
+	// base64 encoded bytes
+	Data string `json:"data"`
+
+	// as described by https://tools.ietf.org/html/rfc7517. Modelled as object so libraries can parse the tokens themselves.
+	PublicKey JWK `json:"publicKey"`
+}
 
 // SymmetricKey defines model for SymmetricKey.
 type SymmetricKey struct {
@@ -152,7 +168,14 @@ func (a JWK) MarshalJSON() ([]byte, error) {
 }
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
-type RequestEditorFn func(req *http.Request, ctx context.Context) error
+type RequestEditorFn func(ctx context.Context, req *http.Request) error
+
+// Doer performs HTTP requests.
+//
+// The standard http.Client implements this interface.
+type HttpRequestDoer interface {
+	Do(req *http.Request) (*http.Response, error)
+}
 
 // Client which conforms to the OpenAPI3 specification for this service.
 type Client struct {
@@ -160,12 +183,57 @@ type Client struct {
 	// https://api.deepmap.com for example.
 	Server string
 
-	// HTTP client with any customized settings, such as certificate chains.
-	Client http.Client
+	// Doer for performing requests, typically a *http.Client with any
+	// customized settings, such as certificate chains.
+	Client HttpRequestDoer
 
 	// A callback for modifying requests which are generated before sending over
 	// the network.
 	RequestEditor RequestEditorFn
+}
+
+// ClientOption allows setting custom parameters during construction
+type ClientOption func(*Client) error
+
+// Creates a new Client, with reasonable defaults
+func NewClient(server string, opts ...ClientOption) (*Client, error) {
+	// create a client with sane default values
+	client := Client{
+		Server: server,
+	}
+	// mutate client and add all optional params
+	for _, o := range opts {
+		if err := o(&client); err != nil {
+			return nil, err
+		}
+	}
+	// ensure the server URL always has a trailing slash
+	if !strings.HasSuffix(client.Server, "/") {
+		client.Server += "/"
+	}
+	// create httpClient, if not already present
+	if client.Client == nil {
+		client.Client = http.DefaultClient
+	}
+	return &client, nil
+}
+
+// WithHTTPClient allows overriding the default Doer, which is
+// automatically created using http.Client. This is useful for tests.
+func WithHTTPClient(doer HttpRequestDoer) ClientOption {
+	return func(c *Client) error {
+		c.Client = doer
+		return nil
+	}
+}
+
+// WithRequestEditorFn allows setting up a callback function, which will be
+// called right before sending the request. This can be used to mutate the request.
+func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
+	return func(c *Client) error {
+		c.RequestEditor = fn
+		return nil
+	}
 }
 
 // The interface specification for the client above.
@@ -184,7 +252,7 @@ func (c *Client) GetAttachmentBySecureHash(ctx context.Context, secureHash strin
 	}
 	req = req.WithContext(ctx)
 	if c.RequestEditor != nil {
-		err = c.RequestEditor(req, ctx)
+		err = c.RequestEditor(ctx, req)
 		if err != nil {
 			return nil, err
 		}
@@ -199,7 +267,7 @@ func (c *Client) GetConsentRequestStateById(ctx context.Context, uuid string) (*
 	}
 	req = req.WithContext(ctx)
 	if c.RequestEditor != nil {
-		err = c.RequestEditor(req, ctx)
+		err = c.RequestEditor(ctx, req)
 		if err != nil {
 			return nil, err
 		}
@@ -218,9 +286,22 @@ func NewGetAttachmentBySecureHashRequest(server string, secureHash string) (*htt
 		return nil, err
 	}
 
-	queryUrl := fmt.Sprintf("%s/api/attachment/%s", server, pathParam0)
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
 
-	req, err := http.NewRequest("GET", queryUrl, nil)
+	basePath := fmt.Sprintf("/api/attachment/%s", pathParam0)
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryUrl.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -239,9 +320,22 @@ func NewGetConsentRequestStateByIdRequest(server string, uuid string) (*http.Req
 		return nil, err
 	}
 
-	queryUrl := fmt.Sprintf("%s/api/consent_request_state/%s", server, pathParam0)
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
 
-	req, err := http.NewRequest("GET", queryUrl, nil)
+	basePath := fmt.Sprintf("/api/consent_request_state/%s", pathParam0)
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryUrl.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -254,34 +348,44 @@ type ClientWithResponses struct {
 	ClientInterface
 }
 
-// NewClientWithResponses returns a ClientWithResponses with a default Client:
-func NewClientWithResponses(server string) *ClientWithResponses {
-	return &ClientWithResponses{
-		ClientInterface: &Client{
-			Client: http.Client{},
-			Server: server,
-		},
+// NewClientWithResponses creates a new ClientWithResponses, which wraps
+// Client with return type handling
+func NewClientWithResponses(server string, opts ...ClientOption) (*ClientWithResponses, error) {
+	client, err := NewClient(server, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &ClientWithResponses{client}, nil
+}
+
+// WithBaseURL overrides the baseURL.
+func WithBaseURL(baseURL string) ClientOption {
+	return func(c *Client) error {
+		newBaseURL, err := url.Parse(baseURL)
+		if err != nil {
+			return err
+		}
+		c.Server = newBaseURL.String()
+		return nil
 	}
 }
 
-// NewClientWithResponsesAndRequestEditorFunc takes in a RequestEditorFn callback function and returns a ClientWithResponses with a default Client:
-func NewClientWithResponsesAndRequestEditorFunc(server string, reqEditorFn RequestEditorFn) *ClientWithResponses {
-	return &ClientWithResponses{
-		ClientInterface: &Client{
-			Client:        http.Client{},
-			Server:        server,
-			RequestEditor: reqEditorFn,
-		},
-	}
+// ClientWithResponsesInterface is the interface specification for the client with responses above.
+type ClientWithResponsesInterface interface {
+	// GetAttachmentBySecureHash request
+	GetAttachmentBySecureHashWithResponse(ctx context.Context, secureHash string) (*GetAttachmentBySecureHashResponse, error)
+
+	// GetConsentRequestStateById request
+	GetConsentRequestStateByIdWithResponse(ctx context.Context, uuid string) (*GetConsentRequestStateByIdResponse, error)
 }
 
-type getAttachmentBySecureHashResponse struct {
+type GetAttachmentBySecureHashResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 }
 
 // Status returns HTTPResponse.Status
-func (r getAttachmentBySecureHashResponse) Status() string {
+func (r GetAttachmentBySecureHashResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -289,21 +393,21 @@ func (r getAttachmentBySecureHashResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r getAttachmentBySecureHashResponse) StatusCode() int {
+func (r GetAttachmentBySecureHashResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type getConsentRequestStateByIdResponse struct {
+type GetConsentRequestStateByIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *FullConsentRequestState
 }
 
 // Status returns HTTPResponse.Status
-func (r getConsentRequestStateByIdResponse) Status() string {
+func (r GetConsentRequestStateByIdResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -311,7 +415,7 @@ func (r getConsentRequestStateByIdResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r getConsentRequestStateByIdResponse) StatusCode() int {
+func (r GetConsentRequestStateByIdResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -319,32 +423,32 @@ func (r getConsentRequestStateByIdResponse) StatusCode() int {
 }
 
 // GetAttachmentBySecureHashWithResponse request returning *GetAttachmentBySecureHashResponse
-func (c *ClientWithResponses) GetAttachmentBySecureHashWithResponse(ctx context.Context, secureHash string) (*getAttachmentBySecureHashResponse, error) {
+func (c *ClientWithResponses) GetAttachmentBySecureHashWithResponse(ctx context.Context, secureHash string) (*GetAttachmentBySecureHashResponse, error) {
 	rsp, err := c.GetAttachmentBySecureHash(ctx, secureHash)
 	if err != nil {
 		return nil, err
 	}
-	return ParsegetAttachmentBySecureHashResponse(rsp)
+	return ParseGetAttachmentBySecureHashResponse(rsp)
 }
 
 // GetConsentRequestStateByIdWithResponse request returning *GetConsentRequestStateByIdResponse
-func (c *ClientWithResponses) GetConsentRequestStateByIdWithResponse(ctx context.Context, uuid string) (*getConsentRequestStateByIdResponse, error) {
+func (c *ClientWithResponses) GetConsentRequestStateByIdWithResponse(ctx context.Context, uuid string) (*GetConsentRequestStateByIdResponse, error) {
 	rsp, err := c.GetConsentRequestStateById(ctx, uuid)
 	if err != nil {
 		return nil, err
 	}
-	return ParsegetConsentRequestStateByIdResponse(rsp)
+	return ParseGetConsentRequestStateByIdResponse(rsp)
 }
 
-// ParsegetAttachmentBySecureHashResponse parses an HTTP response from a GetAttachmentBySecureHashWithResponse call
-func ParsegetAttachmentBySecureHashResponse(rsp *http.Response) (*getAttachmentBySecureHashResponse, error) {
+// ParseGetAttachmentBySecureHashResponse parses an HTTP response from a GetAttachmentBySecureHashWithResponse call
+func ParseGetAttachmentBySecureHashResponse(rsp *http.Response) (*GetAttachmentBySecureHashResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
 	defer rsp.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &getAttachmentBySecureHashResponse{
+	response := &GetAttachmentBySecureHashResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -355,25 +459,26 @@ func ParsegetAttachmentBySecureHashResponse(rsp *http.Response) (*getAttachmentB
 	return response, nil
 }
 
-// ParsegetConsentRequestStateByIdResponse parses an HTTP response from a GetConsentRequestStateByIdWithResponse call
-func ParsegetConsentRequestStateByIdResponse(rsp *http.Response) (*getConsentRequestStateByIdResponse, error) {
+// ParseGetConsentRequestStateByIdResponse parses an HTTP response from a GetConsentRequestStateByIdWithResponse call
+func ParseGetConsentRequestStateByIdResponse(rsp *http.Response) (*GetConsentRequestStateByIdResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
 	defer rsp.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &getConsentRequestStateByIdResponse{
+	response := &GetConsentRequestStateByIdResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		response.JSON200 = &FullConsentRequestState{}
-		if err := json.Unmarshal(bodyBytes, response.JSON200); err != nil {
+		var dest FullConsentRequestState
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
+		response.JSON200 = &dest
 
 	}
 
