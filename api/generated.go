@@ -54,9 +54,24 @@ type Domain string
 
 // FullConsentRequestState defines model for FullConsentRequestState.
 type FullConsentRequestState struct {
+
+	// user generated comment (usually a closing reason)
+	Comment        *string         `json:"comment,omitempty"`
 	ConsentId      ConsentId       `json:"consentId"`
 	ConsentRecords []ConsentRecord `json:"consentRecords"`
-	LegalEntities  []Identifier    `json:"legalEntities"`
+
+	// the date-time when the request was made
+	CreatedAt *time.Time `json:"createdAt,omitempty"`
+
+	// Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a colon (:) and then the identifying value of the given URN
+	InitiatingLegalEntity Identifier `json:"initiatingLegalEntity"`
+
+	// The X500 name of the node that initiated the transaction (read-only)
+	InitiatingNode *string      `json:"initiatingNode,omitempty"`
+	LegalEntities  []Identifier `json:"legalEntities"`
+
+	// the date-time of the latest recorded change in state (read-only)
+	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
 }
 
 // Identifier defines model for Identifier.
