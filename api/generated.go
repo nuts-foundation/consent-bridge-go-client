@@ -49,6 +49,12 @@ type ConsentRecord struct {
 	Signatures *[]PartyAttachmentSignature `json:"signatures,omitempty"`
 }
 
+// ConsentState defines model for ConsentState.
+type ConsentState struct {
+	ConsentId      ConsentId       `json:"consentId"`
+	ConsentRecords []ConsentRecord `json:"consentRecords"`
+}
+
 // Domain defines model for Domain.
 type Domain string
 
@@ -122,6 +128,9 @@ type SignatureWithKey struct {
 	// as described by https://tools.ietf.org/html/rfc7517. Modelled as object so libraries can parse the tokens themselves.
 	PublicKey JWK `json:"publicKey"`
 }
+
+// StateMachineId defines model for StateMachineId.
+type StateMachineId string
 
 // SymmetricKey defines model for SymmetricKey.
 type SymmetricKey struct {
