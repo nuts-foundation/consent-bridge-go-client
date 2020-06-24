@@ -10,8 +10,9 @@ Library for contacting consent-bridge. Exposed as Nuts-go engine.
 .. image:: https://codecov.io/gh/nuts-foundation/consent-bridge-go-client/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/nuts-foundation/consent-bridge-go-client
 
-.. image:: https://api.codacy.com/project/badge/Grade/ad0e073161b4411690e3219a6c5b2331
-    :target: https://www.codacy.com/app/nuts-foundation/consent-bridge-go-client
+.. image:: https://api.codeclimate.com/v1/badges/72a11cae5531100dbbbb/maintainability
+   :target: https://codeclimate.com/github/nuts-foundation/consent-bridge-go-client/maintainability
+   :alt: Maintainability
 
 The consent bridge go client is written in Go and should be part of nuts-go as an engine.
 
@@ -38,7 +39,7 @@ The client and server API is generated from the nuts-consent-store open-api spec
 
 .. code-block:: shell
 
-    oapi-codegen -generate types,client -package api ../nuts-consent-bridge/docs/_static/nuts-consent-bridge.yaml > api/generated.go
+    oapi-codegen -generate types,client,skip-prune -package api ../nuts-consent-bridge/docs/_static/nuts-consent-bridge.yaml > api/generated.go
 
 
 README
