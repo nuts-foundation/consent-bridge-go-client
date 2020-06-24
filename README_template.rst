@@ -20,5 +20,25 @@ Library for contacting consent-bridge. Exposed as Nuts-go engine.
 Configuration
 *************
 
-.. include:: docs/pages/configuration/consent-bridge-go-client.rst
-    :start-after: .. marker-for-readme
+The following configuration parameters are available:
+
+.. include:: README_options.rst
+
+As with all other properties for nuts-go, they can be set through yaml:
+
+.. sourcecode:: yaml
+
+    cbridge:
+       address: localhost:1323
+
+as commandline property
+
+.. sourcecode:: shell
+
+    ./nuts --cbridge.address localhost:1323
+
+Or by using environment variables
+
+.. sourcecode:: shell
+
+    NUTS_CBRIDGE_ADDRESS=localhost:1323 ./nuts
