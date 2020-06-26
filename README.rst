@@ -68,13 +68,13 @@ The resulting html will be available from ``docs/_build/html/index.html``
 Configuration
 *************
 
-The following configuration parameters are available.
+The following configuration parameters are available:
 
-=====================================   ====================    ================================================================
-Property                                Default                 Description
-=====================================   ====================    ================================================================
-nuts.cbridge.address                    localhost:8080          API Address of the consent bridge
-=====================================   ====================    ================================================================
+=======  =====================  =================================
+Key      Default                Description
+=======  =====================  =================================
+address  http://localhost:8080  API Address of the consent bridge
+=======  =====================  =================================
 
 As with all other properties for nuts-go, they can be set through yaml:
 
