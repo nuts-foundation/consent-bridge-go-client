@@ -7,13 +7,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/deepmap/oapi-codegen/pkg/runtime"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/deepmap/oapi-codegen/pkg/runtime"
 )
 
 // ASymmetricKey defines model for ASymmetricKey.
@@ -58,6 +58,14 @@ type ConsentState struct {
 // Domain defines model for Domain.
 type Domain string
 
+// List of Domain
+const (
+	Domain_insurance Domain = "insurance"
+	Domain_medical   Domain = "medical"
+	Domain_pgo       Domain = "pgo"
+	Domain_social    Domain = "social"
+)
+
 // FullConsentRequestState defines model for FullConsentRequestState.
 type FullConsentRequestState struct {
 
@@ -84,9 +92,7 @@ type FullConsentRequestState struct {
 type Identifier string
 
 // JWK defines model for JWK.
-type JWK struct {
-	AdditionalProperties map[string]interface{} `json:"-"`
-}
+type JWK map[string]interface{}
 
 // Metadata defines model for Metadata.
 type Metadata struct {
@@ -138,59 +144,6 @@ type SymmetricKey struct {
 	Iv  string `json:"iv"`
 }
 
-// Getter for additional properties for JWK. Returns the specified
-// element and whether it was found
-func (a JWK) Get(fieldName string) (value interface{}, found bool) {
-	if a.AdditionalProperties != nil {
-		value, found = a.AdditionalProperties[fieldName]
-	}
-	return
-}
-
-// Setter for additional properties for JWK
-func (a *JWK) Set(fieldName string, value interface{}) {
-	if a.AdditionalProperties == nil {
-		a.AdditionalProperties = make(map[string]interface{})
-	}
-	a.AdditionalProperties[fieldName] = value
-}
-
-// Override default JSON handling for JWK to handle AdditionalProperties
-func (a *JWK) UnmarshalJSON(b []byte) error {
-	object := make(map[string]json.RawMessage)
-	err := json.Unmarshal(b, &object)
-	if err != nil {
-		return err
-	}
-
-	if len(object) != 0 {
-		a.AdditionalProperties = make(map[string]interface{})
-		for fieldName, fieldBuf := range object {
-			var fieldVal interface{}
-			err := json.Unmarshal(fieldBuf, &fieldVal)
-			if err != nil {
-				return errors.Wrap(err, fmt.Sprintf("error unmarshaling field %s", fieldName))
-			}
-			a.AdditionalProperties[fieldName] = fieldVal
-		}
-	}
-	return nil
-}
-
-// Override default JSON handling for JWK to handle AdditionalProperties
-func (a JWK) MarshalJSON() ([]byte, error) {
-	var err error
-	object := make(map[string]json.RawMessage)
-
-	for fieldName, field := range a.AdditionalProperties {
-		object[fieldName], err = json.Marshal(field)
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("error marshaling '%s'", fieldName))
-		}
-	}
-	return json.Marshal(object)
-}
-
 // RequestEditorFn  is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
 
@@ -204,7 +157,9 @@ type HttpRequestDoer interface {
 // Client which conforms to the OpenAPI3 specification for this service.
 type Client struct {
 	// The endpoint of the server conforming to this interface, with scheme,
-	// https://api.deepmap.com for example.
+	// https://api.deepmap.com for example. This can contain a path relative
+	// to the server, such as https://api.deepmap.com/dev-test, and all the
+	// paths in the swagger spec will be appended to the server.
 	Server string
 
 	// Doer for performing requests, typically a *http.Client with any
