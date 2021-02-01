@@ -3,7 +3,7 @@ module github.com/nuts-foundation/consent-bridge-go-client
 go 1.13
 
 require (
-	github.com/deepmap/oapi-codegen v1.4.1
+	github.com/deepmap/oapi-codegen v1.5.0
 	github.com/nuts-foundation/nuts-go-core v0.16.0
 	github.com/pelletier/go-toml v1.5.0 // indirect
 	github.com/pkg/errors v0.9.1
